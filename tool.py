@@ -1,7 +1,11 @@
 import googlemaps
 import os
 import json
+from langchain_community.llms import Ollama
 
+from langchain.callbacks.manager import CallbackManager
+from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
+from langchain_core.prompts import ChatPromptTemplate
 
 def get_current_position() -> dict:
     """
@@ -81,3 +85,52 @@ def get_supermarkets_nearby(latitude, longitude, radius=2000):
         })
     
     return supermarkets
+
+def get_recipes(context, input_question):
+
+    """
+    Fetches a recipe suggestion based on the provided context and question.
+
+    The function uses a pre-trained model to generate a recipe based on the input context 
+    (e.g., meal type or dietary preference) and the input question (e.g., a query asking 
+    for a recipe suggestion). The generated recipe includes the exact measurements of each 
+    ingredient in grams and the total calories (kcals) of the recipe.
+
+    Args:
+        context (str): The context or background information for the recipe (e.g., type of meal, dietary restriction).
+        input_question (str): The specific recipe query (e.g., asking for a good recipe for dinner, vegan options).
+
+    Returns:
+        str: The generated recipe in response to the input question, including ingredient amounts in grams 
+             and the total calories for the recipe.
+    """
+
+    private_model = "llama3.1:latest"
+    # Instantiate the model
+    llm = Ollama(
+        model=private_model,
+        #callback_manager=CallbackManager([StreamingStdOutCallbackHandler()]),
+        temperature=0.4,
+    )
+    
+    prompt = ChatPromptTemplate.from_template(
+        """
+    You are a great chef and you know all recipes in the world. You can advise anyone with famous recipes.
+    For every recipe you provide, include the exact measurements of each ingredient in grams, and calculate the total calories (kcals) of the recipe.
+    Context: {context}
+    Question: {input}
+    """
+    )
+    filled_prompt = prompt.format(context=context, input=input_question)
+    
+    # Call the model with the prompt
+    response = llm.invoke(filled_prompt)
+    
+    return response
+    
+
+
+context = "A vegetarian meal for dinner"
+input_question = "What is a good recipe?"
+response = get_recipes(context, input_question)
+print(response)
