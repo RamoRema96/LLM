@@ -12,19 +12,26 @@ prompt = ChatPromptTemplate.from_messages(
     ]
 )
 print(prompt)
+
+
 @tool
 def magic_function(input: int) -> int:
     "A function that simply adds 2 to the input. Input must be integer"
     return input + 2
 
+
 tools = [magic_function]
 
-agent = ChatOllama(model = "tinyllama",temperature = 0.0,num_predict = 256)
+agent = ChatOllama(model="tinyllama", temperature=0.0, num_predict=256)
 agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
 
-agent_executor.invoke({"input": "what is the value of magic_function(3)?",
-                       "chat_history":[],
-                       "agent_scratchpad":[]})
+agent_executor.invoke(
+    {
+        "input": "what is the value of magic_function(3)?",
+        "chat_history": [],
+        "agent_scratchpad": [],
+    }
+)
 
 # # Using with chat history
 # from langchain_core.messages import AIMessage, HumanMessage

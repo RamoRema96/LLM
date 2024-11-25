@@ -7,8 +7,8 @@ def get_current_position() -> dict:
     """
     Retrieves the current geographic position using the Google Maps API.
 
-    This function uses a geolocation request to determine the latitude and longitude 
-    of the device and then performs a reverse geocoding operation to obtain the 
+    This function uses a geolocation request to determine the latitude and longitude
+    of the device and then performs a reverse geocoding operation to obtain the
     formatted address.
 
     Returns:
@@ -35,8 +35,3 @@ def get_current_position() -> dict:
         "address": result[0]["formatted_address"],
     }
     return position
-
-
-
-
-

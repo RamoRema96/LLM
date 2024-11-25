@@ -14,17 +14,19 @@ from langgraph.prebuilt import ToolExecutor, ToolInvocation
 
 load_dotenv()
 
+
 @tool
 def sum(a: int, b: int):
     """
     Returns the result of summing 2 numbers, a and b
     """
-    return a+b
+    return a + b
 
 
 tools = [sum]
 
 tool_executor = ToolExecutor(tools)
+
 
 class AgentState(TypedDict):
     input: str
@@ -33,12 +35,13 @@ class AgentState(TypedDict):
     intermediate_steps: Annotated[list[tuple[AgentAction, str]], operator.add]
 
 
-OLLAMA_MODEL = 'tinyllama' #openhermes
+OLLAMA_MODEL = "tinyllama"  # openhermes
 model = ChatOllama(model=OLLAMA_MODEL)
 prompt = hub.pull("hwchase17/react")
 
 
 agent_runnable = create_react_agent(model, tools, prompt)
+
 
 def execute_tools(state):
     print("Called `execute_tools`")
@@ -75,7 +78,8 @@ def should_continue(state):
         return "end"
     else:
         return "continue"
-    
+
+
 workflow = StateGraph(AgentState)
 
 workflow.add_node("agent", run_agent)
