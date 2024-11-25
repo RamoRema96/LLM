@@ -1,9 +1,9 @@
 from langchain_core.tools import tool
-from langchain_community.tools.tavily_search import TavilySearchResults
+from langchain_core.messages import HumanMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import Runnable
 from langchain_ollama import ChatOllama
-import boto3
+# import boto3
 from typing import Annotated
 from typing_extensions import TypedDict
 from langgraph.graph.message import AnyMessage, add_messages
@@ -13,6 +13,11 @@ from langgraph.prebuilt import ToolNode
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph, START
 from langgraph.prebuilt import tools_condition
+from langchain.agents import create_react_agent
+from langchain import hub
+from typing import Annotated, TypedDict, Union
+from langchain_core.agents import AgentAction, AgentFinish
+
 
 # Tools
 @tool
@@ -107,9 +112,15 @@ def create_tool_node_with_fallback(tools: list) -> dict:
         exception_key="error"  # Specify that this fallback is for handling errors
     )
 
-### State
+# ### State
+# class State(TypedDict):
+#     messages: Annotated[list[AnyMessage], add_messages]
 class State(TypedDict):
+    input: str
     messages: Annotated[list[AnyMessage], add_messages]
+    agent_outcome: Union[AgentAction, AgentFinish, None]
+    intermediate_steps: Annotated[list[tuple[AgentAction, str]], add_messages]
+
 
 class Assistant:
     def __init__(self, runnable: Runnable):
@@ -138,7 +149,6 @@ class Assistant:
         return {"messages": result}
 
 
-
 # Bedrock implementation
 
         ## from langchain_aws import ChatBedrock
@@ -159,7 +169,7 @@ class Assistant:
 # ollama chatmodel -> https://python.langchain.com/api_reference/ollama/chat_models.html
 
 llm = ChatOllama(
-    model = "llama3",
+    model = "tinyllama",
     temperature = 0.8,
     num_predict = 256,
     # other params ...
@@ -183,10 +193,12 @@ primary_assistant_prompt = ChatPromptTemplate.from_messages(
 )
 
 part_1_tools = [
-    TavilySearchResults(max_results=1),
+    # TavilySearchResults(max_results=1),
     compute_savings
 ]
-part_1_assistant_runnable = primary_assistant_prompt | llm.bind_tools(part_1_tools)
+prompt = hub.pull("hwchase17/react")
+print(prompt)
+part_1_assistant_runnable = create_react_agent(llm, part_1_tools, prompt)#primary_assistant_prompt | llm.bind_tools(part_1_tools)
 
 # Graph
 
@@ -208,4 +220,11 @@ builder.add_edge("tools", "assistant")
 # The checkpointer lets the graph persist its state
 # this is a complete memory for the entire graph.
 memory = MemorySaver()
-graph = builder.compile(checkpointer=memory)
+app = builder.compile(checkpointer=memory)
+print("Graph built!")
+# Use the Runnable
+final_state = app.invoke(
+    {"input": [HumanMessage(content="what is the weather in sf")]},
+    config={"configurable": {"thread_id": 42}}
+)
+final_state["messages"][-1].content
