@@ -6,7 +6,7 @@ authors = ["Omar Amer"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = ">=3.10,<4.0"
 langgraph = "^0.2.53"
 langchain-core = "^0.3.21"
 langchain-community = "^0.3.8"
@@ -21,6 +21,9 @@ llama-index-llms-groq = "^0.3.0"
 groq = "^0.12.0"
 langchain-groq = "^0.2.1"
 black = "^24.10.0"
+fatsecret = "^0.4.0"
+rauth = "^0.7.3"
+scipy = "^1.14.1"
 
 
 [tool.poetry.group.dev.dependencies]
