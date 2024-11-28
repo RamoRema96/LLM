@@ -2,7 +2,7 @@ import os
 import pandas as pd
 from langchain_community.vectorstores.faiss import FAISS
 from langchain_community.embeddings import OllamaEmbeddings
-
+from tqdm import tqdm
 
 class VectorStore:
     def __init__(
@@ -13,19 +13,33 @@ class VectorStore:
 
     def __create_db(self, docs: list):
         """
-        Create a new vectorstore from the provided documents
-        docs(list): It is a list of dictionary. It must contain the keys "text" and "metadata"
+        Create a new vectorstore from the provided documents with progress monitoring.
+        
+        docs(list): It is a list of dictionaries. It must contain the keys "text" and "metadata".
         """
         try:
-            texts = [doc["text"] for doc in docs]
-            metadatas = [doc["metadata"] for doc in docs]
-            vectorStore = FAISS.from_texts(
-                texts, embedding=self.embedding, metadatas=metadatas
-            )
-            vectorStore.save_local(self.save_path)
-            return vectorStore
+            # Directory for temporary individual vector stores
+            os.makedirs(self.save_path, exist_ok=True)
+
+            for i, doc in enumerate(tqdm(docs, desc="Creating vector database", unit="doc")):
+                # Extract text and metadata
+                texts = [doc["text"]]
+                metadatas = [doc["metadata"]]
+
+                # Create a vector store for the single document
+                vectorStore = FAISS.from_texts(
+                    texts, embedding=self.embedding, metadatas=metadatas
+                )
+
+                # Save the vector store to a temporary file
+                vectorStore.save_local(os.path.join(self.save_path, f"doc_{i}"))
+
+            print("Individual vector stores created and saved.")
+            return True
+
+
         except KeyError as e:
-            print(f"KeyError: Missing key {e} in one or more documents")
+                print(f"KeyError: Missing key {e} in one or more documents")
 
     def load_or_create_db(self, docs=None):
         """
