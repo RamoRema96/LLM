@@ -35,22 +35,24 @@ def create_chain(vectorStore):
     # Prompt template
     prompt = ChatPromptTemplate.from_template(
         """
-    You are a professional chef and are very good at suggest recepies that match with the request of the client. Use just the reciped that you find, do not create anything by yourself
-    Context: {context}
-    Question: {input}
+        Sei un assistente culinario esperto e devi suggerire il miglior piatto in base alle preferenze dell'utente.
+        Usa le ricette come riferimento e non inventare nulla:
+        {context}
+        Domanda: {input}
+        Rispondi con una ricetta suggerita, spiega il motivo della scelta.
     """
     )
     # Create LLM chain
     chain = create_stuff_documents_chain(llm=llm, prompt=prompt)
     # se vuoi che ti funzioni devi per forza mettere quella variabile context
-    retriever = vectorStore.as_retriever(search_kwargs={"k": 4})
+    retriever = vectorStore.as_retriever(search_kwargs={"k": 3})
     retriever_chain = create_retrieval_chain(retriever, chain)
     return retriever_chain
 
 chain = create_chain(vectorStore)
 response = chain.invoke(
     {
-        "input": "Voglio mangiare qualcosa di agnello stasera, cosa mi consigli?"
+        "input": "vorre un piatto di pasta "
     }
 )
 print(response)
