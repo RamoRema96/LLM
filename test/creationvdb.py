@@ -20,7 +20,7 @@ def chunk_recipe(recipe_row):
     """
     Splits the recipe description into chunks and associates metadata.
     """
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=100, chunk_overlap=20)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=200, chunk_overlap=20)
     chunks = []
     for i, chunk in enumerate(text_splitter.split_text(recipe_row["description"])):
         chunks.append(
