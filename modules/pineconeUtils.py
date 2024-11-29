@@ -87,3 +87,32 @@ def from_df_to_pinecone(
             print(f"Error {e} - batch {i}")
             continue
     return ids_loaded
+
+def retrieve_documents(
+    namespace: str,
+    query: str,
+    top_k: int = 10,
+    metadata_filters=None,
+) -> pd.DataFrame:
+    """
+    Retrieves documents from Pinecone, filters out undesired keys, and returns a DataFrame.
+
+    :param namespace: The namespace to search within.
+    :param query: The query to search for.
+    :param top_k: The number of top documents to retrieve.
+    :param keys_to_drop: List of keys to drop from the document metadata.
+    :param metadata_filters: Filters to apply to the metadata.
+    """
+    # Initialize Pinecone index and query embeddings
+    index = pc.Index("eu")
+
+    # Perform vector search using the embedded query
+    #TODO embedded_query = # embedding_model.embed_query(query)
+    search_results = index.query(
+        vector=embedded_query,
+        top_k=top_k,
+        include_metadata=True,
+        namespace=namespace,
+        filter=metadata_filters,
+    )
+    return search_results
