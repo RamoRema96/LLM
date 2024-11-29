@@ -3,6 +3,7 @@ import pandas as pd
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 import sys
 
+
 # Add the root directory of your project to the Python path
 current_dir = os.path.dirname(os.path.realpath(__file__))
 parent_dir = os.path.abspath(os.path.join(current_dir, ".."))
@@ -35,16 +36,18 @@ def chunk_recipe(recipe_row):
         )
     return chunks
 
-chunked_recipes = df.apply(chunk_recipe, axis=1).explode().reset_index(drop=True)
+chunked_recipes = df[["recipe_id", "description", "title"]]
+chunked_recipes["metadata"] = chunked_recipes.apply(
+    lambda row: {"recipe_id": row["recipe_id"], "title": row["title"]}, axis=1
+)
 
+print(chunked_recipes)
 
 # Prepare documents for embedding
-docs = [{"text": chunk["text"], "metadata": chunk["metadata"]} for chunk in chunked_recipes]
+docs = [{"text": row["description"], "metadata": row["metadata"]} for _, row in chunked_recipes.iterrows()]
 
-# Initialize the vector store
-private_model = "llama3.1:latest"
-vectordb = VectorStore(embedding_model=private_model, save_path="./faiss_index_recipes")
-
+# # Initialize the vector store
+vectordb = VectorStore()
 
 # Load or create the db
 vectorStore = vectordb.load_or_create_db(docs=docs)
