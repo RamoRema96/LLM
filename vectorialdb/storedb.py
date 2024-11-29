@@ -1,14 +1,18 @@
 import os
 import pandas as pd
 from langchain_community.vectorstores.faiss import FAISS
-from langchain_community.embeddings import OllamaEmbeddings
+from langchain.embeddings.openai import OpenAIEmbeddings
 from tqdm import tqdm
+from dotenv import load_dotenv
 
+
+load_dotenv(".localenv")
 class VectorStore:
+    open_api_key = ""
     def __init__(
-        self, embedding_model="llama3.1:latest", save_path="./faiss_index_cv"
+        self, embedding_model="text-embedding-ada-002", save_path="./faiss_index_recipes_openai"
     ) -> None:
-        self.embedding = OllamaEmbeddings(model=embedding_model)
+        self.embedding = OpenAIEmbeddings(model=embedding_model)
         self.save_path = save_path
 
     def __create_db(self, docs: list):
@@ -17,24 +21,17 @@ class VectorStore:
         
         docs(list): It is a list of dictionaries. It must contain the keys "text" and "metadata".
         """
+        
         try:
-            # Directory for temporary individual vector stores
-            os.makedirs(self.save_path, exist_ok=True)
-
-            for i, doc in enumerate(tqdm(docs, desc="Creating vector database", unit="doc")):
-                # Extract text and metadata
-                texts = [doc["text"]]
-                metadatas = [doc["metadata"]]
-
-                # Create a vector store for the single document
-                vectorStore = FAISS.from_texts(
-                    texts, embedding=self.embedding, metadatas=metadatas
-                )
-
-                # Save the vector store to a temporary file
-                vectorStore.save_local(os.path.join(self.save_path, f"doc_{i}"))
-
-            print("Individual vector stores created and saved.")
+            texts = [doc["text"] for doc in docs]
+            metadatas = [doc["metadata"] for doc in docs]
+            vectorStore = FAISS.from_texts(
+                texts, embedding=self.embedding, metadatas=metadatas
+            )
+            vectorStore.save_local(self.save_path)
+            return vectorStore
+        except KeyError as e:
+            print(f"KeyError: Missing key {e} in one or more documents")
             return True
 
 
