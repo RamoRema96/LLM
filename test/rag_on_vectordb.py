@@ -16,10 +16,13 @@ from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain_core.prompts import ChatPromptTemplate
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.chains import create_retrieval_chain
+from dotenv import load_dotenv
+from langchain_openai import ChatOpenAI
 
-private_model = "llama3.1:latest"
 
-vectordb = VectorStore(embedding_model = private_model, save_path="./combined_store")
+load_dotenv(".localenv")
+
+vectordb = VectorStore()
 
 # Load or create the db
 vectorStore = vectordb.load_or_create_db()
@@ -27,11 +30,7 @@ vectorStore = vectordb.load_or_create_db()
 def create_chain(vectorStore):
 
     # Instatiate the model
-    llm = Ollama(
-        model=private_model,
-        callback_manager=CallbackManager([StreamingStdOutCallbackHandler()]),
-        temperature=0.4,
-    )
+    llm = ChatOpenAI(model = "gpt-3.5-turbo-1106", temperature = 0.4)
     # Prompt template
     prompt = ChatPromptTemplate.from_template(
         """
@@ -52,7 +51,7 @@ def create_chain(vectorStore):
 chain = create_chain(vectorStore)
 response = chain.invoke(
     {
-        "input": "vorre un piatto di pasta "
+        "input": "vorre un piatto a base di pesce"
     }
 )
 print(response)
