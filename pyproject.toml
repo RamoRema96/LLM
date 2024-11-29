@@ -15,6 +15,7 @@ llama-index = "^0.12.1"
 llama-index-llms-ollama = "^0.4.1"
 googlemaps = "^4.10.0"
 geopy = "^2.4.1"
+faiss-cpu = "^1.9.0.post1"
 
 
 [build-system]
