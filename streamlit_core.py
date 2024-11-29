@@ -8,16 +8,11 @@ from langgraph.graph.message import add_messages
 from langgraph.prebuilt import tools_condition
 from langgraph.checkpoint.memory import MemorySaver
 from langchain_groq import ChatGroq
-from modules.graphUtils import BasicToolNode, quantity_optimizer, get_nutrients
-
-
-
+from modules.utils import BasicToolNode, quantity_optimizer, get_nutrients, system_message
 # REFERENCES
 # 1. groq model-> https://groq.com/introducing-llama-3-groq-tool-use-models/
 # 1.b groq pricing -> https://groq.com/pricing/
 # 2. langraph with memory -> https://langchain-ai.github.io/langgraph/tutorials/introduction/#part-3-adding-memory-to-the-chatbot
-
-
 
 # Load environment variables
 load_dotenv()
@@ -53,18 +48,7 @@ def chatbot(state: State) -> Dict[str, List]:
     """
     Handles user interaction and integrates tool usage when required.
     """
-    context_message = """
-    You are an AI agent specializing in providing suggestions about healthy food choices and nutrition. 
-    In addition to your conversational abilities, you have access to the following tools:
-
-    - `magic_function`: A specialized tool for performing unique operations as requested by the user.
-    - `author_info`: A tool to retrieve detailed information about authors when explicitly requested.
-    - `get_nutrients`: A powerful tool for retrieving detailed nutritional information about specific foods.
-    - `quantity_optimizer`: A tool for optimizing food quantities based on user-defined constraints for calories and macronutrients (proteins, fats, carbohydrates).
-
-    You should only use these tools when the user explicitly asks for their functionality or when it enhances the user's query related to food or nutrition.
-    """
-    messages_with_context = [SystemMessage(context_message)] + state["messages"]
+    messages_with_context = [SystemMessage(system_message)] + state["messages"]
     response_to_append = {"messages": [llm_with_tools.invoke(messages_with_context)]}
     return response_to_append
 

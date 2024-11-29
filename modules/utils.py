@@ -2,20 +2,55 @@ import json
 from langchain_core.messages import ToolMessage
 from typing import  List, Dict
 from langchain.agents import tool
+from langchain_groq import ChatGroq
 import os 
 from fatsecret import Fatsecret
 import numpy as np
 from scipy.optimize import minimize
 from dotenv import load_dotenv
 
+# Load environment variables
 load_dotenv()
 
+#  ~~~~~~~~~~~~~~~~~~~~~ LLM ~~~~~~~~~~~~~~~~~~
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+LLAMA_MODEL = os.getenv("LLAMA_MODEL")
+# Check if environment variables are loaded
+if not GROQ_API_KEY or not LLAMA_MODEL:
+    raise ValueError("GROQ_API_KEY and/or LLAMA_MODEL environment variables are not set.")
+# Initialize the LLM
+llm = ChatGroq(
+    model=LLAMA_MODEL,
+    temperature=0.0,
+    max_retries=2,
+    api_key=GROQ_API_KEY,
+)
+
+
+# ~~~~~~~~~~~~~ FatSecret Init ~~~~~~~~~~~~~~~~~~~~~~~~~
 CONSUMER_KEY_FATSECRET = os.getenv("CONSUMER_KEY_FATSECRET")
 CONSUMER_SECRET_FATSECRET = os.getenv("CONSUMER_SECRET_FATSECRET")
-print(CONSUMER_KEY_FATSECRET, CONSUMER_SECRET_FATSECRET)
 fs = Fatsecret(CONSUMER_KEY_FATSECRET, CONSUMER_SECRET_FATSECRET)
 
-# Tool node definition
+
+# ~~~~~~~~~~~~~~~~~~System Message, to update as new tools are added ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+system_message = """
+                You are an advanced AI agent called RecipeHero designed to assist users with nutritional information and food optimization.
+                Your functionality includes:
+                1. **Providing nutritional insights**: Use the FatSecret API to fetch nutrient data for specific foods.
+                2. **Optimizing food quantities**: Use the optimizer to calculate ideal proportions of foods. The dietary goals are pre-defined within the optimizer tool and should not be asked of the user.
+
+                Rules:
+                - If the user asks for food-related information, use the tools available in the "FatSecret" node.
+                - If the user provides specific foods and requests optimization, transition to the "Optimizer" node. Use the `quantity_optimizer` tool directly, assuming pre-configured dietary goals.
+                - Avoid asking the user for dietary goals, as they are already specified.
+                - For general questions unrelated to food or optimization, stay in the "Chatbot" node.
+
+                Always strive to provide clear, actionable, and user-friendly responses. Ensure the user's needs are met efficiently.
+            """
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Tool node Initialization ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 class BasicToolNode:
     """
     A node to execute tools requested in the last AIMessage.
@@ -30,7 +65,7 @@ class BasicToolNode:
 
         message = messages[-1]
         outputs = []
-        for tool_call in message.tool_calls:
+        for i,tool_call in enumerate(message.tool_calls):
             tool_result = self.tools_by_name[tool_call["name"]].invoke(
                 tool_call["args"]
             )
@@ -43,11 +78,11 @@ class BasicToolNode:
             )
         return {"messages": outputs}
     
-# Tool definitions
+# ~~~~~~~~~~~~~~~~~~~~~~~ Tool definitions ~~~~~~~~~~~~~~~~~~~~~~~~~
 @tool
-def quantity_optimizer(selected_food):
+def quantity_optimizer(selected_food:Dict):
     """
-    Optimizes the quantities of selected foods to meet specific nutritional and caloric constraints.
+    Optimizes the quantities of selected foods.
 
     Args:
         selected_food (dict): A nested dictionary with the following structure:
@@ -75,8 +110,8 @@ def quantity_optimizer(selected_food):
     P = MEAL_WEIGHT * BODY_WEIGHT * 1.5  # Target protein (grams)
     G = MEAL_WEIGHT * 70                 # Target fat (grams)
     C = MEAL_WEIGHT * 150                # Target carbohydrates (grams)
-    K_MAX = MEAL_WEIGHT * 2000           # Maximum calories (kcal)
-    K_MIN = MEAL_WEIGHT * 1800           # Minimum calories (kcal)
+    K_MAX = MEAL_WEIGHT * 3000           # Maximum calories (kcal)
+    K_MIN = MEAL_WEIGHT * 2500           # Minimum calories (kcal)
 
     def compute_macros(q, key):
         return sum(q[i] * selected_food[food][key] / 100 for i, food in enumerate(selected_food))
