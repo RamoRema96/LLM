@@ -6,6 +6,73 @@ from langchain_community.llms import Ollama
 from langchain.callbacks.manager import CallbackManager
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain_core.prompts import ChatPromptTemplate
+from langchain.chains import create_retrieval_chain
+from dotenv import load_dotenv
+from langchain_openai import ChatOpenAI
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from vectorialdb.storedb import VectorStore
+
+load_dotenv(".localenv")
+
+def rag(query_user:str):
+    """
+    Retrieves a suggested recipe based on the user's query by leveraging a retrieval-augmented generation (RAG) system.
+
+    This function uses a vector store to load or create a database of recipes and employs a language model (GPT-3.5) 
+    to generate a recipe suggestion based on the user's preferences. The system uses a combination of document retrieval 
+    and language model-based generation to suggest the most relevant recipe. The user query is matched to relevant documents 
+    in the vector store, which are then used to generate a response.
+
+    Args:
+        query_user (str): A string containing the user's query about a recipe. For example, a request like "I'd like a pasta dish".
+
+    Returns:
+        str: The generated response from the model, which includes the suggested recipe and an explanation of the choice.
+        
+    Example:
+        >>> response = rag("vorrei un piatto di pasta")
+        >>> print(response)
+        "Ti consiglio di preparare un piatto di spaghetti aglio e olio, poiché è un piatto semplice e veloce con ingredienti comuni."
+
+    The function follows these steps:
+    1. Loads or creates a vector database (VectorStore) containing recipes.
+    2. Uses a language model (`ChatOpenAI` with the `gpt-3.5-turbo-1106` model) to generate a response.
+    3. Retrieves relevant documents from the vector store based on the user's query (with a search limit of 3).
+    4. Uses the retrieved context to formulate a response, combining document retrieval with the model's generation capabilities.
+    """
+    vectordb = VectorStore()
+
+# Load or create the db
+    vectorStore = vectordb.load_or_create_db()
+
+    def create_chain(vectorStore):
+
+        # Instatiate the model
+        llm = ChatOpenAI(model = "gpt-3.5-turbo-1106", temperature = 0.4)
+        # Prompt template
+        prompt = ChatPromptTemplate.from_template(
+            """
+            Sei un assistente culinario esperto e devi suggerire il miglior piatto in base alle preferenze dell'utente.
+            Usa le ricette come riferimento e non inventare nulla:
+            {context}
+            Domanda: {input}
+            Rispondi con una ricetta suggerita, spiega il motivo della scelta.
+        """
+        )
+        # Create LLM chain
+        chain = create_stuff_documents_chain(llm=llm, prompt=prompt)
+        # se vuoi che ti funzioni devi per forza mettere quella variabile context
+        retriever = vectorStore.as_retriever(search_kwargs={"k": 3})
+        retriever_chain = create_retrieval_chain(retriever, chain)
+        return retriever_chain
+
+    chain = create_chain(vectorStore)
+    response = chain.invoke(
+        {
+            "input": f"{query_user}"
+        }
+)
+    return response
 
 def get_current_position() -> dict:
     """
