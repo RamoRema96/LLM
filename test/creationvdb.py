@@ -36,18 +36,52 @@ def chunk_recipe(recipe_row):
         )
     return chunks
 
-chunked_recipes = df[["recipe_id", "description", "title"]]
-chunked_recipes["metadata"] = chunked_recipes.apply(
-    lambda row: {"recipe_id": row["recipe_id"], "title": row["title"]}, axis=1
-)
+# chunked_recipes = df[["recipe_id", "description", "title"]]
+# chunked_recipes["metadata"] = chunked_recipes.apply(
+#     lambda row: {"recipe_id": row["recipe_id"], "title": row["title"]}, axis=1
+# )
 
-print(chunked_recipes)
+# print(chunked_recipes)
 
-# Prepare documents for embedding
-docs = [{"text": row["description"], "metadata": row["metadata"]} for _, row in chunked_recipes.iterrows()]
+# # Prepare documents for embedding
+# docs = [{"text": row["description"], "metadata": row["metadata"]} for _, row in chunked_recipes.iterrows()]
 
 # # Initialize the vector store
 vectordb = VectorStore()
 
 # Load or create the db
-vectorStore = vectordb.load_or_create_db(docs=docs)
+vectorStore = vectordb.load_or_create_db()
+
+
+import numpy as np
+
+# Access the underlying FAISS index
+faiss_index = vectorStore.index
+
+# Get the number of stored vectors
+num_vectors = faiss_index.ntotal
+
+# Reconstruct all vectors
+vectors = np.array([faiss_index.reconstruct(i) for i in range(num_vectors)])
+
+# Inspect the vectors
+print("Vectors shape:", vectors.shape)
+print("Vectors:", vectors)
+# Retrieve all document IDs from the docstore
+doc_ids = list(vectorStore.docstore._dict.keys())
+
+# Access metadata for each document ID
+metadata = [vectorStore.docstore._dict[doc_id].metadata for doc_id in doc_ids]
+
+new_documents = []
+# Combine vectors and metadata
+for i, vector in enumerate(vectors):
+
+
+    new_documents.append(
+                    {
+                        "id": doc_ids[i],
+                        "values": vector,
+                        "metadata": metadata[i],
+                    }
+                )
