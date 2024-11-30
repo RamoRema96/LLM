@@ -6,7 +6,7 @@ from langgraph.graph import StateGraph
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import tools_condition
 from langgraph.checkpoint.memory import MemorySaver
-from modules.utils import BasicToolNode, quantity_optimizer, get_nutrients, diet_explorer, system_message, llm
+from modules.utils import BasicToolNode, quantity_optimizer, get_nutrients, diet_explorer, diet_manager ,system_message, llm
 # from langgraph.graph import END
 from ast import literal_eval
 import json
@@ -20,7 +20,7 @@ if "memory_saver" not in st.session_state:
 
 # Initialize memory saver and tools
 config = {"configurable": {"thread_id": "1"}}
-my_tools = [get_nutrients, quantity_optimizer,diet_explorer]
+my_tools = [get_nutrients, quantity_optimizer,diet_explorer,diet_manager]
 tool_fatsecret = [get_nutrients]
 tool_optimizer = [quantity_optimizer]
 
