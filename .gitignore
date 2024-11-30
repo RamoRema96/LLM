@@ -1,4 +1,6 @@
 credentials
 recipes_table.csv
 faiss_index_recipes
-
+faiss_index_recipes_openai_description
+.localenv
+recipes.csv
