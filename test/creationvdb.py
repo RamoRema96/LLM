@@ -54,10 +54,10 @@ chunked_recipes["metadata"] = chunked_recipes.apply(
 docs = [{"text": row["description"], "metadata": row["metadata"]} for _, row in chunked_recipes.iterrows()]
 
 # # Initialize the vector store
-vectordb = VectorStore(save_path="faiss_index_recipes_openai_description")
+vectordb = VectorStore(save_path="faiss_index_recipes_384", embedding_model="paraphrase-MiniLM-L12-v2")
 
 # Load or create the db
-vectorStore = vectordb.load_or_create_db(docs=docs,)
+vectorStore = vectordb.load_or_create_db(docs=docs)
 
 
 import numpy as np
@@ -80,7 +80,7 @@ doc_ids = list(vectorStore.docstore._dict.keys())
 # Access metadata for each document ID
 metadata = [vectorStore.docstore._dict[doc_id].metadata for doc_id in doc_ids]
 
-index = pc.Index("llama-hackaton")
+index = pc.Index("llama-hackaton-384")
 new_documents = []
 # Combine vectors and metadata
 for i, vector in enumerate(vectors):
@@ -96,6 +96,6 @@ for i, vector in enumerate(vectors):
 
 
 
-    index.upsert(vectors=new_documents, namespace="recipes")
+    index.upsert(vectors=new_documents, namespace="recipes_384")
 
 
