@@ -2,7 +2,14 @@ import os
 import pandas as pd
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 import sys
+from pinecone.grpc import PineconeGRPC as Pinecone
+from dotenv import load_dotenv
 
+
+load_dotenv(".localenv")
+
+PINECONE_KEY = os.getenv("PINECONE_KEY")
+pc = Pinecone(api_key=PINECONE_KEY)
 
 # Add the root directory of your project to the Python path
 current_dir = os.path.dirname(os.path.realpath(__file__))
@@ -36,21 +43,21 @@ def chunk_recipe(recipe_row):
         )
     return chunks
 
-# chunked_recipes = df[["recipe_id", "description", "title"]]
-# chunked_recipes["metadata"] = chunked_recipes.apply(
-#     lambda row: {"recipe_id": row["recipe_id"], "title": row["title"]}, axis=1
-# )
+chunked_recipes = df[["recipe_id", "description", "title"]]
+chunked_recipes["metadata"] = chunked_recipes.apply(
+    lambda row: {"recipe_id": row["recipe_id"], "title": row["title"], "description":row["description"]}, axis=1
+)
 
 # print(chunked_recipes)
 
-# # Prepare documents for embedding
-# docs = [{"text": row["description"], "metadata": row["metadata"]} for _, row in chunked_recipes.iterrows()]
+# Prepare documents for embedding
+docs = [{"text": row["description"], "metadata": row["metadata"]} for _, row in chunked_recipes.iterrows()]
 
 # # Initialize the vector store
-vectordb = VectorStore()
+vectordb = VectorStore(save_path="faiss_index_recipes_openai_description")
 
 # Load or create the db
-vectorStore = vectordb.load_or_create_db()
+vectorStore = vectordb.load_or_create_db(docs=docs,)
 
 
 import numpy as np
@@ -64,15 +71,16 @@ num_vectors = faiss_index.ntotal
 # Reconstruct all vectors
 vectors = np.array([faiss_index.reconstruct(i) for i in range(num_vectors)])
 
-# Inspect the vectors
-print("Vectors shape:", vectors.shape)
-print("Vectors:", vectors)
+# # Inspect the vectors
+# print("Vectors shape:", vectors.shape)
+# print("Vectors:", vectors)
 # Retrieve all document IDs from the docstore
 doc_ids = list(vectorStore.docstore._dict.keys())
 
 # Access metadata for each document ID
 metadata = [vectorStore.docstore._dict[doc_id].metadata for doc_id in doc_ids]
 
+index = pc.Index("llama-hackaton")
 new_documents = []
 # Combine vectors and metadata
 for i, vector in enumerate(vectors):
@@ -85,3 +93,9 @@ for i, vector in enumerate(vectors):
                         "metadata": metadata[i],
                     }
                 )
+
+
+
+    index.upsert(vectors=new_documents, namespace="recipes")
+
+
