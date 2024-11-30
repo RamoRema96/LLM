@@ -22,7 +22,7 @@ from langchain_openai import ChatOpenAI
 
 load_dotenv(".localenv")
 
-vectordb = VectorStore()
+vectordb = VectorStore(save_path="faiss_index_recipes_openai")
 
 # Load or create the db
 vectorStore = vectordb.load_or_create_db()
