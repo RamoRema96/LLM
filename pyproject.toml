@@ -17,6 +17,7 @@ googlemaps = "^4.10.0"
 geopy = "^2.4.1"
 faiss-cpu = "^1.9.0.post1"
 langchain-openai = "^0.2.10"
+pinecone = {version = "^5.0.1", extras = ["grpc"]}
 
 
 [build-system]
