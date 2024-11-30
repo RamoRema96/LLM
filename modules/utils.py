@@ -12,8 +12,9 @@ from langchain.agents import create_react_agent, AgentExecutor
 from langchain import hub
 from langchain.sql_database import SQLDatabase
 from langchain.prompts import PromptTemplate
-
 from langchain_community.agent_toolkits.sql.toolkit import SQLDatabaseToolkit
+import logging
+
 # Load environment variables
 load_dotenv()
 
@@ -50,7 +51,12 @@ system_message = """
                 - If the user asks for food-related information, use the tools available in the "FatSecret" node.
                 - If the user provides specific foods and requests optimization, transition to the "Optimizer" node. Use the `quantity_optimizer` tool directly, assuming pre-configured dietary goals.
                 - If the user asks about their past meals or planned meals, use the `diet_explorer` tool to query the diet table.
-                  **IMPORTANT** The argument to pass must be message provided by the user using his natural language. DO NOT elaborate any sql query, the tool will handle it.
+                  **IMPORTANT** The argument to pass must be message provided by the user using his natural language. 
+                   DO NOT elaborate any sql query, the tool will handle it.
+                       ### Example User Queries To pass to the sql agent:
+                        - "What meals have I planned for dinner this week?"
+                        - "How many recipes have I tried so far?"
+                        - "What did I eat for breakfast last Monday?"
                 - Avoid asking the user for dietary goals, as they are already specified.
                 - For general questions unrelated to food, meal tracking, or optimization, stay in the "Chatbot" node.
 
@@ -280,7 +286,8 @@ def diet_explorer(question: str):
     prompt_string = """
     You are an advanced AI agent specialized in answering queries related to dietary habits, using the schema of a table named `diet` to fetch accurate information. 
 
-    ### Table Schema:
+    You don't need to fetch the diet table schema, as that is specified here:
+    ### `diet` Table Schema:
 
         - day (DATE)
         - recipeID (STRING)
@@ -295,20 +302,17 @@ def diet_explorer(question: str):
 
     Use the following format:
     Question: the input question you must answer
-    Thought: you should always think about what to do
-    Action: the action to take, should be one of [{tool_names}]
-    Action Input: the input to the action
-    Observation: the result of the action
-    ... (this Thought/Action/Action Input/Observation can repeat N times)
 
-    Thought: I now know the final answer
-    Final Answer: the final answer to the original input question
+    Loop thorugh the following though process until you get the correct answer.
 
+        - Thought: you should always think about what to do
+        - Action: the action to take, should be one of [{tool_names}]
+        - Action Input: the input to the action
+        - Observation: the result of the action
 
-    ### Example User Queries:
-    - "What meals have I planned for dinner this week?"
-    - "How many recipes have I tried so far?"
-    - "What did I eat for breakfast last Monday?"
+    As you get the correct answer returns:
+        - Final Answer: the output from the final sql query.
+
 
     Question: {input}
 
@@ -324,13 +328,20 @@ def diet_explorer(question: str):
 
     # Initialize the agent with tools and the detailed prompt
     agent = create_react_agent(llm, toolkit.get_tools(), prompt)
-    agent_executor = AgentExecutor(agent=agent, tools=toolkit.get_tools(), verbose=True,handle_parsing_errors=True)
+    agent_executor = AgentExecutor(agent=agent, 
+                                   tools=toolkit.get_tools(), 
+                                   max_execution_time=5,
+                                   verbose=True,
+                                   handle_parsing_errors=True,
+                                   return_intermediate_steps=False
+                                   )
 
     # Invoke the agent with the provided query
-    response = agent_executor.invoke(
-        {
-            "input": question
-        }
-    )
+    try:
+        response = agent_executor.invoke({"input": question})
+        return response
 
-    return response
+    except Exception as e:
+        logging.error(f"Error during agent execution: {e}")
+        raise
+
