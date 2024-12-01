@@ -17,7 +17,7 @@ fatsecret == "^0.4.0"
 rauth == "^0.7.3"
 scipy == "^1.14.1"
 streamlit == "^1.40.2"
-pinecone == {version == "^5.0.1", extras == ["grpc"]}
+pinecone == {version = "^5.0.1", extras = ["grpc"]}
 google-api-core == "^2.23.0"
 protoc-gen-openapiv2 == "^0.0.1"
 grpcio == "^1.68.0"
