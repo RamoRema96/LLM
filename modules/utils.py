@@ -490,7 +490,7 @@ def diet_manager(recipe:Dict) -> Dict:
 def retrieve_recipes(
     query: str,
     namespace: str ="recipes",
-    top_k: int = 10,
+    top_k: int = 1,
     metadata_filters=None,
 ) -> pd.DataFrame:
     """
@@ -543,4 +543,6 @@ def retrieve_recipes(
         namespace=namespace,
         filter=metadata_filters,
     )
-    return search_results
+    results = search_results.matches[0]["metadata"]["description"]
+    return results
+    
