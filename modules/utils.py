@@ -16,6 +16,11 @@ from langchain_community.agent_toolkits.sql.toolkit import SQLDatabaseToolkit
 import logging
 import datetime
 import sqlite3
+import pandas as pd
+from pinecone.grpc import PineconeGRPC as Pinecone
+from openai import OpenAI
+
+
 
 # Load environment variables
 load_dotenv()
@@ -23,6 +28,7 @@ load_dotenv()
 #  ~~~~~~~~~~~~~~~~~~~~~ LLM ~~~~~~~~~~~~~~~~~~
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 LLAMA_MODEL = os.getenv("LLAMA_MODEL")
+
 # Check if environment variables are loaded
 if not GROQ_API_KEY or not LLAMA_MODEL:
     raise ValueError("GROQ_API_KEY and/or LLAMA_MODEL environment variables are not set.")
@@ -33,7 +39,10 @@ llm = ChatGroq(
     max_retries=2,
     api_key=GROQ_API_KEY,
 )
+####------------ env for pinecone --------#######################
 
+PINECONE_KEY = os.getenv("PINECONE_KEY")
+pc = Pinecone(api_key=PINECONE_KEY)
 
 # ~~~~~~~~~~~~~ FatSecret Init ~~~~~~~~~~~~~~~~~~~~~~~~~
 CONSUMER_KEY_FATSECRET = os.getenv("CONSUMER_KEY_FATSECRET")
@@ -476,3 +485,62 @@ def diet_manager(recipe:Dict) -> Dict:
     insert_into_diet(recipe)
 
     return recipe
+
+@tool
+def retrieve_recipes(
+    query: str,
+    namespace: str ="recipes",
+    top_k: int = 10,
+    metadata_filters=None,
+) -> pd.DataFrame:
+    """
+    Retrieves the most relevant recipes based on a user's query using a semantic search. 
+    This function performs retrieval-augmented generation (RAG) by searching for recipes 
+    stored in a Pinecone vector database, filtering results using optional metadata, and 
+    ranking the results by similarity.
+
+    The function:
+    - Embeds the user's query into a vector representation.
+    - Normalizes the vector to ensure consistent similarity comparison.
+    - Queries the Pinecone database within the specified namespace.
+    - Retrieves the top-k matching results, including their metadata.
+
+    :param query: The user's search query, which is semantically encoded for retrieval.
+    :param namespace: The namespace within Pinecone to search (default: "recipes").
+    :param top_k: The number of top matching results to return (default: 10).
+    :param metadata_filters: Optional metadata filters to apply when querying the database.
+    :return: A pandas DataFrame containing the retrieved recipes and their metadata.
+    """
+
+    def normalize_l2(x):
+        x = np.array(x)
+        if x.ndim == 1:
+            norm = np.linalg.norm(x)
+            if norm == 0:
+                return x
+            return x / norm
+        else:
+            norm = np.linalg.norm(x, 2, axis=1, keepdims=True)
+            return np.where(norm == 0, x, x / norm)
+
+    # Initialize Pinecone index and query embeddings
+    index = pc.Index("llama-hackathon-256")
+
+    # Perform vector search using the embedded query
+    client = OpenAI()
+    # Create embeddings using the client
+    response = client.embeddings.create(
+        model="text-embedding-3-small", input=query, encoding_format="float"
+    )
+    
+    # Cut and normalize the embedding
+    cut_dim = response.data[0].embedding[:256]
+    embedded_query = normalize_l2(cut_dim)
+    search_results = index.query(
+        vector=embedded_query,
+        top_k=top_k,
+        include_metadata=True,
+        namespace=namespace,
+        filter=metadata_filters,
+    )
+    return search_results
