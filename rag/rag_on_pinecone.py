@@ -29,7 +29,7 @@ pc = Pinecone(api_key=PINECONE_KEY)
 def retrieve_documents(
     namespace: str,
     query: str,
-    top_k: int = 10,
+    top_k: int = 1,
     metadata_filters=None,
 ) -> pd.DataFrame:
     """
@@ -61,7 +61,11 @@ def retrieve_documents(
         namespace=namespace,
         filter=metadata_filters,
     )
-    return search_results
+    results = search_results.matches[0]["metadata"]["description"]
+    return results
 
 results = retrieve_documents(namespace="recipes", query="Mi consigli qualcosa a base di pesce")
+
+# print(type(results))
 print(results)
+#print(results.matches[0]["metadata"]["description"])
